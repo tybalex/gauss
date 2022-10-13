@@ -5,6 +5,7 @@ import uuid
 from kubernetes import client
 from kubernetes import config
 from kubernete_job import KubernetesJob
+import kubernete_job
 
 logging.basicConfig(level=logging.INFO)
 config.load_kube_config()
@@ -33,11 +34,14 @@ def delete_job(job_name):
     batch_api = client.BatchV1Api()
     _namespace = "default"
     try:
-        result = batch_api.delete_namespaced_job(job_name, _namespace)
-        return f"job deleted. details : {result.status}"
+        if job_name in list_all_job():
+            result = batch_api.delete_namespaced_job(job_name, _namespace)
+            return 0, f"job deleted. details : {result.status}"
+        else:
+            return 1, "no such training job."
     except Exception as e:
         logging.warning(e)
-        return f"failed to delete job: {job_name}"
+        return 2, "exception deletion."
 
 
 def get_job_status(job_name):
@@ -50,29 +54,28 @@ def get_job_status(job_name):
         logging.warning(e)
         return f"failed to get job status: {job_name}"
 
-def create_new_job():
-
-    job_id = uuid.uuid4()
-    pod_id = job_id
+def create_new_job(job_name, image_name=None):
 
     """ Steps 1 to 3 is the equivalent of the ./manifestfiles/shuffler_job.yaml """
 
     # Kubernetes instance
     k8s = KubernetesJob()
+    if not image_name:
+        _image = "docker.io/tybalex/opni-gauss:dev"
+    else :
+        _image = image_name
 
     # STEP1: CREATE A CONTAINER
-    _image = "docker.io/tybalex/opni-gauss:dev"
+    
     _name = "ml-training"
     _pull_policy = "Always"
-
-    shuffler_container = k8s.create_container(_image, _name, _pull_policy, "test123")
+    shuffler_container = k8s.create_container(_image, _name, _pull_policy)
 
     # STEP2: CREATE A POD TEMPLATE SPEC
-    _pod_name = f"{_name}-pod-{pod_id}"
+    _pod_name = f"pod-{job_name}"
     _pod_spec = k8s.create_pod_template(_pod_name, shuffler_container)
 
     # STEP3: CREATE A JOB
-    job_name = f"{_name}-{job_id}"
     _job = k8s.create_job(job_name, _pod_spec)
 
     # STEP4: CREATE NAMESPACE

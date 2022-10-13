@@ -26,18 +26,20 @@ async def get_training_jobs(job_name):
 
 @app.get("/delete_job/{job_name}")
 async def delete_training_jobs(job_name):
-    result = delete_job(job_name)
     nc = await nats.connect("nats://localhost:4222")
     await nc.publish("delete_job", job_name.encode())
-    return {"message": result}
+    return {"message": f"deletion of job : {job_name} submitted."}
 
 
 @app.get("/create_job")
 async def create_job():
-    job_name = create_new_job()
+    # job_name = create_new_job()
+    job_id = str(uuid.uuid4())
+    _name = "ml-training"
+    job_name = f"{_name}-{job_id}"
     nc = await nats.connect("nats://localhost:4222")
     await nc.publish("create_job", job_name.encode())
-    return {"message" : f"created job : {job_name}"}
+    return {"message" : f"job creation request submitted, job-name : {job_name}"}
 
 
 

@@ -35,7 +35,7 @@ class KubernetesJob:
         return namespace
 
     @staticmethod
-    def create_container(image, name, pull_policy, args):
+    def create_container(image, name, pull_policy, args=""):
 
         container = client.V1Container(
             image=image,
