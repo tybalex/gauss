@@ -24,13 +24,13 @@ class KubernetesJob:
             all_namespaces.append(ns.metadata.name)
 
         if namespace in all_namespaces:
-            logging.info(f"Namespace {namespace} already exists. Reusing.")
+            logging.debug(f"Namespace {namespace} already exists. Reusing.")
         else:
             namespace_metadata = client.V1ObjectMeta(name=namespace)
             self.core_api.create_namespace(
                 client.V1Namespace(metadata=namespace_metadata)
             )
-            logging.info(f"Created namespace {namespace}.")
+            logging.debug(f"Created namespace {namespace}.")
 
         return namespace
 
@@ -45,7 +45,7 @@ class KubernetesJob:
             command=["python3", "./run.py"],
         )
 
-        logging.info(
+        logging.debug(
             f"Created container with name: {container.name}, "
             f"image: {container.image} and args: {container.args}"
         )
@@ -73,3 +73,8 @@ class KubernetesJob:
         )
 
         return job
+    
+
+if __name__ == "__main__":
+    k8s = KubernetesJob()
+    

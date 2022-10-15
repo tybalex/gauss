@@ -1,11 +1,9 @@
 import logging
-import argparse
 import uuid
 
 from kubernetes import client
 from kubernetes import config
 from kubernete_job import KubernetesJob
-import kubernete_job
 
 logging.basicConfig(level=logging.INFO)
 config.load_kube_config()
@@ -23,10 +21,15 @@ def parse_v1job_status(result):
     else: return "inprogress"
 
 
-def list_all_job():
+def get_jobs():
     batch_api = client.BatchV1Api()
     _namespace = "default"
     result = batch_api.list_namespaced_job(_namespace)
+    return result
+
+
+def list_all_job():
+    result = get_jobs()
     res = [r.metadata.name for r in result.items]
     return res
 
@@ -67,7 +70,7 @@ def create_new_job(job_name, image_name=None):
 
     # STEP1: CREATE A CONTAINER
     
-    _name = "ml-training"
+    _name = "ml-training" if "training" in job_name else "ml-inferencing"
     _pull_policy = "Always"
     shuffler_container = k8s.create_container(_image, _name, _pull_policy)
 
@@ -87,3 +90,9 @@ def create_new_job(job_name, image_name=None):
     batch_api.create_namespaced_job(_namespace, _job)
 
     return job_name
+
+if __name__ == "__main__":
+    create_new_job("test123",)
+    # result = get_jobs()
+    # res = [r.metadata.name  for r in result.items if r.status.active]
+    # print(res)
