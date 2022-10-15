@@ -35,15 +35,25 @@ class KubernetesJob:
         return namespace
 
     @staticmethod
-    def create_container(image, name, pull_policy, args=""):
+    def create_container(image, name, pull_policy, resource=None, args=""):
 
-        container = client.V1Container(
-            image=image,
-            name=name,
-            image_pull_policy=pull_policy,
-            args=[args],
-            command=["python3", "./run.py"],
-        )
+        if resource:
+            container = client.V1Container(
+                image=image,
+                name=name,
+                image_pull_policy=pull_policy,
+                resources=resource,
+                args=[args],
+                command=["python3", "./run.py"],
+            )
+        else:
+            container = client.V1Container(
+                image=image,
+                name=name,
+                image_pull_policy=pull_policy,
+                args=[args],
+                command=["python3", "./run.py"],
+            )
 
         logging.debug(
             f"Created container with name: {container.name}, "

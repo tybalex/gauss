@@ -1,4 +1,5 @@
 import logging
+import time
 import uuid
 
 from kubernetes import client
@@ -24,8 +25,16 @@ def parse_v1job_status(result):
 def get_jobs():
     batch_api = client.BatchV1Api()
     _namespace = "default"
-    result = batch_api.list_namespaced_job(_namespace)
-    return result
+    config.load_kube_config()
+    RETRY = 5
+    while RETRY > 0:
+        try:
+            result = batch_api.list_namespaced_job(_namespace)
+            return result
+        except Exception as e:
+            time.sleep(1)
+            RETRY -= 1
+    return False
 
 
 def list_all_job():
@@ -36,15 +45,17 @@ def list_all_job():
 def delete_job(job_name):
     batch_api = client.BatchV1Api()
     _namespace = "default"
+    body = client.V1DeleteOptions(propagation_policy='Background')
     try:
         if job_name in list_all_job():
-            result = batch_api.delete_namespaced_job(job_name, _namespace)
+            result = batch_api.delete_namespaced_job(job_name, _namespace, body=body)
             return 0, f"job deleted. details : {result.status}"
         else:
             return 1, "no such training job."
     except Exception as e:
         logging.warning(e)
         return 2, "exception deletion."
+    
 
 
 def get_job_status(job_name):
@@ -64,7 +75,7 @@ def create_new_job(job_name, image_name=None):
     # Kubernetes instance
     k8s = KubernetesJob()
     if not image_name:
-        _image = "docker.io/tybalex/opni-gauss:dev"
+        _image = "docker.io/tybalex/opni-gauss:training"
     else :
         _image = image_name
 
@@ -72,7 +83,9 @@ def create_new_job(job_name, image_name=None):
     
     _name = "ml-training" if "training" in job_name else "ml-inferencing"
     _pull_policy = "Always"
-    shuffler_container = k8s.create_container(_image, _name, _pull_policy)
+    _resource = client.V1ResourceRequirements(limits={"nvidia.com/gpu": 1})
+    # _resource=None
+    shuffler_container = k8s.create_container(_image, _name, _pull_policy, resource=_resource)
 
     # STEP2: CREATE A POD TEMPLATE SPEC
     _pod_name = f"pod-{job_name}"
