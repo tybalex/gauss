@@ -20,6 +20,7 @@ async def root():
 
 @app.get("/get_job_status/{job_name}")
 async def get_training_jobs(job_name):
+    # TODO: show progress. that would be helpful.
     result = get_job_status(job_name)
     return {"message": result}
 
